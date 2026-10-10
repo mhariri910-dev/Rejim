@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- طبق -->
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="4.5"
+        android:fillColor="#00000000"
+        android:pathData="M54,54m-21,0a21,21 0,1 1,42 0a21,21 0,1 1,-42 0"/>
+    <path android:fillColor="#33FFFFFF"
+        android:pathData="M54,54m-13,0a13,13 0,1 1,26 0a13,13 0,1 1,-26 0"/>
+    <!-- ورقة -->
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="3.6"
+        android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M45,60 Q47,48 60,47 Q59,60 45,60 Z"/>
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="3"
+        android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M46,61 L58,49"/>
+</vector>
