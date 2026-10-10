@@ -48,11 +48,7 @@ jobs:
           gh release delete latest -y --cleanup-tag 2>/dev/null || true
           gh release create latest rejim.apk \
             --title "رجيمات — أحدث نسخة" \
-            --notes "ملف تثبيت تطبيق رجيمات للأندرويد.
-
-نزّل **rejim.apk** وثبّته مباشرة.
-
-بُني تلقائيًا من آخر تحديث للمستودع." \
+            --notes "نزّل rejim.apk وثبّته مباشرة. بُني تلقائيًا من آخر تحديث للمستودع." \
             --latest
 
       - name: Upload APK artifact
