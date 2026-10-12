@@ -1531,7 +1531,7 @@ function render(){
   let dayNo = 1;
   let startTxt = "تاريخ البداية (Startdatum): غير محدد";
   if(start){
-    const diff = Math.floor((now - start) / (1000*60*60*24));
+    const diff = Math.round((now - start) / (1000*60*60*24));
     dayNo = diff + 1 + offset;
     startTxt = `تاريخ البداية (Startdatum): ${fmtDate(start)}`;
   } else {
@@ -2269,7 +2269,7 @@ if("serviceWorker" in navigator){
     var s=new Date(v);
     if(isNaN(s.getTime())) return 1;
     s.setHours(0,0,0,0);
-    return Math.floor((today()-s)/86400000)+1;
+    return Math.round((today()-s)/86400000)+1;
   }
   function totalDays(){ return planDays().length || 1; }
   function currentDay(){
@@ -3474,6 +3474,30 @@ if("serviceWorker" in navigator){
     };
   }
   try{ paint(); }catch(e){}
+})();
+</script>
+<script>
+/* قلب اليوم تلقائياً: عند تغيّر التاريخ (منتصف الليل) أو عند العودة للتطبيق بعد إطفاء الشاشة أو بقائه مفتوحاً */
+(function(){
+  function key(){var d=new Date();return d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate();}
+  var last=key();
+  function check(){
+    var k=key();
+    if(k===last) return;
+    last=k;
+    try{ window.render(); }catch(e){}
+  }
+  setInterval(check, 15000);
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden) check(); });
+  window.addEventListener("focus", check);
+  window.addEventListener("pageshow", check);
+  window.addEventListener("online", check);
+  /* مؤقت دقيق لمنتصف الليل القادم */
+  function arm(){
+    var n=new Date(), m=new Date(n.getFullYear(), n.getMonth(), n.getDate()+1, 0, 0, 2);
+    setTimeout(function(){ check(); arm(); }, Math.min(m-n, 2147483000));
+  }
+  arm();
 })();
 </script>
 </body>
