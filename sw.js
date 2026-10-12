@@ -1,5 +1,5 @@
 // يعمل التطبيق بلا إنترنت بعد أول فتح
-const CACHE = "rejim-v4";
+const CACHE = "rejim-v5";
 const ASSETS = ["./","./index.html","./manifest.webmanifest",
                 "./icon-192.png","./icon-512.png","./icon-maskable.png"];
 
