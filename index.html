@@ -1334,6 +1334,34 @@ body.dark .bottomNav{box-shadow:0 10px 24px rgba(0,0,0,.45), 0 26px 60px rgba(0,
   line-height:1.8;
   color:var(--muted);
 }
+
+/* ===== طبقة التحسين النهائية ===== */
+.btn.btnPrimary,.btnPrimary{background:linear-gradient(135deg,var(--accent1),var(--accent2));color:#fff!important;border:0;box-shadow:0 6px 16px rgba(15,157,116,.28)}
+.btn.btnPrimary:active{transform:scale(.98)}
+.btn{min-height:46px;border-radius:14px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.field,input.field,select.field{width:100%;box-sizing:border-box;min-height:46px;border-radius:12px;font-size:16px}
+.wForm{display:grid;gap:10px}
+.wRow2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.wActions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}
+.wActions2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.wSaveBtn{width:100%;font-size:17px;min-height:52px}
+.wTiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.wTile{background:var(--card-soft);border:1px solid var(--line);border-radius:16px;padding:12px;text-align:center}
+.wTile b{display:block;font-size:22px;color:var(--text)}
+.wTile span{font-size:12px;color:var(--muted)}
+.wTile.good b{color:var(--ok)} .wTile.bad b{color:var(--danger)}
+.wList{margin-top:12px;display:grid;gap:8px;max-height:260px;overflow:auto}
+.wItem{display:flex;align-items:center;gap:10px;background:var(--card-soft);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.wItem .wv{font-weight:900;font-size:17px;min-width:70px}
+.wItem .wd{font-size:13px;color:var(--muted);flex:1}
+.wItem .wn{font-size:12px;color:var(--faint)}
+.wEmpty{text-align:center;color:var(--muted);padding:14px;font-size:14px}
+#wChart{background:var(--card-soft)!important;border:1px solid var(--line)}
+.modalCard{max-height:92vh;overflow:auto;-webkit-overflow-scrolling:touch}
+body{padding-bottom:96px}
+#toastBox{position:fixed;left:50%;transform:translateX(-50%);bottom:92px;background:#111A22;color:#fff;padding:12px 18px;border-radius:14px;font-weight:700;z-index:9999;opacity:0;pointer-events:none;transition:opacity .25s;max-width:88vw;text-align:center}
+#toastBox.on{opacity:1}
+body.dark #toastBox{background:#E8EEF3;color:#111A22}
 </style>
 </head>
 <body>
@@ -1716,103 +1744,77 @@ function closeWeight(){
   m.setAttribute("aria-hidden","true");
 }
 
+function toast(msg){
+  let t=document.getElementById("toastBox");
+  if(!t){ t=document.createElement("div"); t.id="toastBox"; document.body.appendChild(t); }
+  t.textContent=msg; t.classList.add("on");
+  clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("on"),2200);
+}
+function esc(x){ return String(x==null?"":x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 function renderWeights(){
-  const tbody = document.querySelector("#wTable tbody");
-  const stats = document.getElementById("wStats");
-  if(!tbody) return;
-  const arr = wLoad().sort((a,b)=> (b.date||"").localeCompare(a.date||""));
-  tbody.innerHTML = "";
-  if(arr.length===0){
-    if(stats) stats.textContent = "لا توجد قياسات بعد";
+  const list=document.getElementById("wList");
+  const tiles=document.getElementById("wTiles");
+  const stats=document.getElementById("wStats");
+  if(!list) return;
+  const arr=wLoad().filter(x=>isFinite(parseFloat(x.w))).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  list.innerHTML="";
+  if(!arr.length){
+    if(tiles) tiles.innerHTML='<div class="wTile" style="grid-column:1/-1"><b>—</b><span>لا توجد قياسات بعد. أدخل وزنك واضغط «حفظ الوزن»</span></div>';
+    if(stats) stats.textContent="";
+    list.innerHTML='<div class="wEmpty">لا توجد قياسات محفوظة</div>';
     return;
   }
-  const latest = arr[0];
-  const oldest = arr[arr.length-1];
-  const delta = (parseFloat(latest.w) - parseFloat(oldest.w));
-  const deltaTxt = isFinite(delta) ? (delta>0? `زيادة ${delta.toFixed(1)} kg` : `نقص ${Math.abs(delta).toFixed(1)} kg`) : "";
-  if(stats) stats.textContent = `آخر وزن ${latest.w} kg بتاريخ ${latest.date}` + (deltaTxt? `   التغير منذ أول قياس   ${deltaTxt}`:"");
-
+  const latest=parseFloat(arr[0].w), first=parseFloat(arr[arr.length-1].w);
+  const delta=latest-first;
+  const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-7);
+  const cs=cutoff.toISOString().slice(0,10);
+  const wk=arr.filter(x=>x.date>=cs).map(x=>parseFloat(x.w));
+  const avg=wk.length?(wk.reduce((a,b)=>a+b,0)/wk.length):null;
+  let goal=null; try{ goal=parseFloat(localStorage.getItem("diet_goal_v1")); }catch(e){}
+  const left=isFinite(goal)?(latest-goal):null;
+  const cls=delta<0?"good":(delta>0?"bad":"");
+  const sign=v=>(v>0?"+":"")+v.toFixed(1);
+  let h=`<div class="wTile"><b>${latest.toFixed(1)}</b><span>آخر وزن (كغ)</span></div>
+    <div class="wTile ${cls}"><b dir="ltr">${arr.length>1?sign(delta):"0.0"}</b><span>التغيّر منذ أول قياس</span></div>
+    <div class="wTile"><b>${avg!=null?avg.toFixed(1):"—"}</b><span>متوسط آخر 7 أيام</span></div>
+    <div class="wTile"><b>${left!=null?(left<=0?"✓ تحقق":left.toFixed(1)):"—"}</b><span>${left!=null?"المتبقي للهدف (كغ)":"حدّد هدفك من الشاشة الرئيسية"}</span></div>`;
+  if(tiles) tiles.innerHTML=h;
+  if(stats) stats.textContent=`عدد القياسات: ${arr.length} — آخر قياس بتاريخ ${arr[0].date}`;
   for(const it of arr){
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${it.date||""}</td>
-      <td>${it.w||""}</td>
-      <td>${(it.note||"")}</td>
-      <td>
-        <button class="iconBtn" data-del="${it.id}" aria-label="حذف">✕</button>
-      </td>`;
-    tbody.appendChild(tr);
+    const d=document.createElement("div"); d.className="wItem";
+    d.innerHTML=`<div class="wv">${esc(it.w)} كغ</div><div class="wd">${esc(it.date)}${it.note?`<div class="wn">${esc(it.note)}</div>`:""}</div><button class="iconBtn" data-del="${esc(it.id)}" aria-label="حذف">✕</button>`;
+    list.appendChild(d);
   }
-  tbody.querySelectorAll("[data-del]").forEach(b=>{
-    b.addEventListener("click", ()=>{
-      const id = b.getAttribute("data-del");
-      const next = wLoad().filter(x=> String(x.id)!==String(id));
-      wSave(next);
-      renderWeights();
-      drawWChart();
-    });
-  });
+  list.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{
+    const id=b.getAttribute("data-del");
+    wSave(wLoad().filter(x=>String(x.id)!==String(id)));
+    renderWeights(); drawWChart(); toast("تم حذف القياس");
+  }));
 }
 
 function drawWChart(){
-  const c = document.getElementById("wChart");
-  if(!c) return;
-  const ctx = c.getContext("2d");
-  const arr = wLoad().sort((a,b)=> (a.date||"").localeCompare(b.date||""));
-  const w = c.width = c.clientWidth * (window.devicePixelRatio||1);
-  const h = c.height = 140 * (window.devicePixelRatio||1);
-  ctx.clearRect(0,0,w,h);
-
-  if(arr.length<2){
-    ctx.globalAlpha = .7;
-    ctx.font = `${14*(window.devicePixelRatio||1)}px system-ui`;
-    ctx.fillText("أضف قياسين على الأقل لرسم الخط", 16*(window.devicePixelRatio||1), 40*(window.devicePixelRatio||1));
-    ctx.globalAlpha = 1;
-    return;
-  }
-  const ws = arr.map(x=>parseFloat(x.w)).filter(x=>isFinite(x));
-  if(ws.length<2) return;
-  const minW = Math.min(...ws), maxW = Math.max(...ws);
-  const pad = 18*(window.devicePixelRatio||1);
-  const X0=pad, Y0=pad, X1=w-pad, Y1=h-pad;
-
-  // grid
-  ctx.globalAlpha = .35;
-  ctx.lineWidth = 1*(window.devicePixelRatio||1);
-  ctx.beginPath();
-  for(let i=0;i<=3;i++){
-    const y = Y0 + (Y1-Y0)*(i/3);
-    ctx.moveTo(X0,y); ctx.lineTo(X1,y);
-  }
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-
-  // line
-  const denom = (maxW-minW) || 1;
-  const n = arr.length;
-  ctx.lineWidth = 3*(window.devicePixelRatio||1);
-  ctx.beginPath();
-  for(let i=0;i<n;i++){
-    const x = X0 + (X1-X0)*(i/(n-1));
-    const y = Y1 - (Y1-Y0)*((parseFloat(arr[i].w)-minW)/denom);
-    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-  }
-  ctx.strokeStyle = "rgba(37,99,235,.95)";
-  ctx.stroke();
-
-  // points
-  ctx.fillStyle = "rgba(22,163,74,.95)";
-  for(let i=0;i<n;i++){
-    const x = X0 + (X1-X0)*(i/(n-1));
-    const y = Y1 - (Y1-Y0)*((parseFloat(arr[i].w)-minW)/denom);
-    ctx.beginPath(); ctx.arc(x,y,4*(window.devicePixelRatio||1),0,Math.PI*2); ctx.fill();
-  }
-
-  // labels
-  ctx.fillStyle = "rgba(15,23,42,.75)";
-  ctx.font = `${12*(window.devicePixelRatio||1)}px system-ui`;
-  ctx.fillText(`${maxW.toFixed(1)} kg`, X0, Y0-6*(window.devicePixelRatio||1));
-  ctx.fillText(`${minW.toFixed(1)} kg`, X0, Y1+14*(window.devicePixelRatio||1));
+  const c=document.getElementById("wChart"); if(!c) return;
+  const dpr=window.devicePixelRatio||1, dark=document.body.classList.contains("dark");
+  const ink=dark?"rgba(232,238,243,.85)":"rgba(17,26,34,.75)";
+  const gridc=dark?"rgba(255,255,255,.12)":"rgba(17,26,34,.10)";
+  const w=c.width=Math.max(200,c.clientWidth)*dpr, h=c.height=160*dpr;
+  const ctx=c.getContext("2d"); ctx.clearRect(0,0,w,h);
+  const arr=wLoad().filter(x=>isFinite(parseFloat(x.w))).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  ctx.font=`${13*dpr}px system-ui`; ctx.fillStyle=ink; ctx.textAlign="center";
+  if(arr.length<2){ ctx.fillText("أضف قياسين على الأقل لرسم الخط",w/2,h/2); return; }
+  const ws=arr.map(x=>parseFloat(x.w)); let mn=Math.min(...ws), mx=Math.max(...ws);
+  if(mx-mn<1){ mn-=.5; mx+=.5; }
+  const L=44*dpr,R=14*dpr,T=16*dpr,B=24*dpr, X0=L,X1=w-R,Y0=T,Y1=h-B, n=arr.length;
+  const X=i=>X0+(X1-X0)*(i/(n-1)), Y=v=>Y1-(Y1-Y0)*((v-mn)/(mx-mn));
+  ctx.strokeStyle=gridc; ctx.lineWidth=dpr; ctx.textAlign="right";
+  for(let i=0;i<=2;i++){ const v=mn+(mx-mn)*(i/2), y=Y(v); ctx.beginPath(); ctx.moveTo(X0,y); ctx.lineTo(X1,y); ctx.stroke(); ctx.fillText(v.toFixed(1),L-6*dpr,y+4*dpr); }
+  const g=ctx.createLinearGradient(0,Y0,0,Y1); g.addColorStop(0,"rgba(15,157,116,.28)"); g.addColorStop(1,"rgba(15,157,116,0)");
+  ctx.beginPath(); ctx.moveTo(X(0),Y1); arr.forEach((it,i)=>ctx.lineTo(X(i),Y(ws[i]))); ctx.lineTo(X(n-1),Y1); ctx.closePath(); ctx.fillStyle=g; ctx.fill();
+  ctx.beginPath(); arr.forEach((it,i)=>{ i?ctx.lineTo(X(i),Y(ws[i])):ctx.moveTo(X(i),Y(ws[i])); });
+  ctx.strokeStyle="#0F9D74"; ctx.lineWidth=3*dpr; ctx.lineJoin="round"; ctx.stroke();
+  arr.forEach((it,i)=>{ ctx.beginPath(); ctx.arc(X(i),Y(ws[i]),4*dpr,0,7); ctx.fillStyle=dark?"#0B1017":"#fff"; ctx.fill(); ctx.lineWidth=2.5*dpr; ctx.strokeStyle="#0F9D74"; ctx.stroke(); });
+  ctx.fillStyle=ink; ctx.textAlign="center";
+  ctx.fillText(arr[0].date.slice(5),X0+10*dpr,h-6*dpr); ctx.fillText(arr[n-1].date.slice(5),X1-10*dpr,h-6*dpr);
 }
 
 function wExport(){
@@ -1997,17 +1999,15 @@ if(wClose) wClose.addEventListener("click", closeWeight);
 
 const wAdd = document.getElementById("wAdd");
 if(wAdd) wAdd.addEventListener("click", ()=>{
-  const d = document.getElementById("wDate")?.value || "";
-  const v = document.getElementById("wValue")?.value || "";
-  const n = document.getElementById("wNote")?.value || "";
-  if(!d || !v) return;
-  const arr = wLoad();
-  arr.push({id: Date.now()+Math.random(), date:d, w:String(v), note:String(n||"")});
+  const dEl=document.getElementById("wDate"), vEl=document.getElementById("wValue"), nEl=document.getElementById("wNote");
+  const d=(dEl&&dEl.value)||"", v=parseFloat(String((vEl&&vEl.value)||"").replace(",","."));
+  if(!d){ toast("اختر التاريخ"); return; }
+  if(!isFinite(v)||v<20||v>400){ toast("أدخل وزناً صحيحاً (مثال 92.5)"); if(vEl) vEl.focus(); return; }
+  const arr=wLoad().filter(x=>x.date!==d); // قياس واحد لكل يوم: الجديد يستبدل القديم
+  arr.push({id: Date.now()+Math.random(), date:d, w:String(v), note:String((nEl&&nEl.value)||"")});
   wSave(arr);
-  const val = document.getElementById("wValue"); if(val) val.value = "";
-  const note = document.getElementById("wNote"); if(note) note.value = "";
-  renderWeights();
-  drawWChart();
+  if(vEl) vEl.value=""; if(nEl) nEl.value="";
+  renderWeights(); drawWChart(); toast("✓ تم حفظ الوزن "+v.toFixed(1)+" كغ");
 });
 
 const wEx = document.getElementById("wExport");
@@ -2137,7 +2137,7 @@ if(accX) accX.addEventListener("click", appReset);
   <nav class="bottomNav" aria-label="التنقل السفلي">
     <button class="navBtn" id="navWeight" type="button" aria-label="الوزن">
       <span class="navI" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><path d="M6 7a6 6 0 0 1 12 0v2h1a1 1 0 0 1 1 1v9a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-9a1 1 0 0 1 1-1h1V7Zm2 2h8V7a4 4 0 0 0-8 0v2Zm4 2a3 3 0 0 0-3 3v3h6v-3a3 3 0 0 0-3-3Z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm0 2v14h14V5H5Zm7 2a5 5 0 0 1 4.9 4H7.1A5 5 0 0 1 12 7Zm0 2.2-1.6 2.3h3.2L12 9.2Z"/></svg>
       </span>
       <span class="navT">الوزن</span>
     </button>
@@ -2162,50 +2162,26 @@ if(accX) accX.addEventListener("click", appReset);
       <button class="iconBtn" id="weightClose" type="button" aria-label="إغلاق">×</button>
     </div>
 
-    <div class="grid2">
-      <div>
-        <div class="lbl">التاريخ</div>
-        <input class="field" id="wDate" type="date">
+    <div class="wTiles" id="wTiles"></div>
+    <canvas id="wChart" height="160" style="width:100%; margin-top:12px; border-radius:14px;"></canvas>
+
+    <div class="wForm" style="margin-top:14px;">
+      <div class="wRow2">
+        <div><div class="lbl">التاريخ</div><input class="field" id="wDate" type="date"></div>
+        <div><div class="lbl">الوزن (كغ)</div><input class="field" id="wValue" type="number" step="0.1" inputmode="decimal" placeholder="مثال 92.5"></div>
       </div>
-      <div>
-        <div class="lbl">الوزن kg</div>
-        <input class="field" id="wValue" type="number" inputmode="decimal" placeholder="مثال 92.5">
+      <div><div class="lbl">ملاحظة</div><input class="field" id="wNote" type="text" placeholder="اختياري"></div>
+    </div>
+    <div class="wActions">
+      <button class="btn btnPrimary wSaveBtn" id="wAdd" type="button">💾 حفظ الوزن</button>
+      <div class="wActions2">
+        <button class="btn btnSecondary" id="wExport" type="button">تصدير</button>
+        <label class="btn btnSecondary" for="wImport">استيراد<input id="wImport" type="file" accept="application/json" style="display:none;"></label>
       </div>
     </div>
-
-    <div style="margin-top:10px;">
-      <div class="lbl">ملاحظة</div>
-      <input class="field" id="wNote" type="text" placeholder="اختياري">
-    </div>
-
-    <div style="display:flex; gap:10px; margin-top:12px;">
-      <button class="btn btnPrimary" id="wAdd" type="button">إضافة</button>
-      <button class="btn btnSecondary" id="wExport" type="button">تصدير</button>
-      <label class="btn btnWarning" style="cursor:pointer;">
-        استيراد
-        <input id="wImport" type="file" accept="application/json" style="display:none;">
-      </label>
-    </div>
-
-    <div class="pill" style="margin-top:12px;">
-      <div class="small" id="wStats">لا توجد قياسات بعد</div>
-    </div>
-
-    <div class="tableWrap" style="margin-top:10px;">
-      <table class="tModern" id="wTable">
-        <thead>
-          <tr>
-            <th>التاريخ</th>
-            <th>الوزن</th>
-            <th>ملاحظة</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
-    <canvas id="wChart" height="140" style="width:100%; margin-top:10px; border-radius:14px; background:rgba(255,255,255,.7);"></canvas>
+    <div class="small" id="wStats" style="margin-top:10px;color:var(--muted)"></div>
+    <div class="wList" id="wList"></div>
+    <table id="wTable" style="display:none"><tbody></tbody></table>
   </div>
 </div>
 
